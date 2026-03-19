@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aura Admin Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    body { background: #0A0A1A; color: #fff; }
+    ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: #1A1A2E; }
+    ::-webkit-scrollbar-thumb { background: #3A3A5C; border-radius: 3px; }
+    .card { background: #1A1A2E; border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; }
+    .badge-pro { background: rgba(247,201,72,0.15); color: #F7C948; border: 1px solid rgba(247,201,72,0.3); }
+    .badge-free { background: rgba(255,255,255,0.08); color: #A0A0B8; }
+    .badge-active { background: rgba(0,184,148,0.15); color: #00B894; }
+    .badge-inactive { background: rgba(255,107,107,0.15); color: #FF6B6B; }
+    .nav-item { transition: all 0.15s; }
+    .nav-item.active, .nav-item:hover { background: rgba(108,92,231,0.2); color: #A29BFE; }
+    input, select { background: #25253D; border: 1px solid rgba(255,255,255,0.08); color: #fff; }
+    input::placeholder { color: #6C6C80; }
+    .stat-card { background: linear-gradient(135deg, #1A1A2E, #25253D); }
+    table tbody tr:hover { background: rgba(255,255,255,0.02); }
+  </style>
+</head>
+<body class="min-h-screen flex">
+
+  <!-- Sidebar -->
+  <aside class="w-64 min-h-screen card rounded-none border-r border-white/5 flex flex-col p-4 fixed top-0 left-0 bottom-0 z-10">
+    <div class="flex items-center gap-3 mb-8 px-2 pt-2">
+      <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background: linear-gradient(135deg, #6C5CE7, #A29BFE)">
+        <span class="text-white font-bold text-lg">A</span>
+      </div>
+      <div>
+        <div class="font-bold text-white text-base">Aura Admin</div>
+        <div class="text-xs text-gray-500">Control Panel</div>
+      </div>
+    </div>
+    <nav class="flex flex-col gap-1 flex-1">
+      <button onclick="showPage('overview')" class="nav-item active rounded-xl px-3 py-2.5 text-sm font-medium text-left flex items-center gap-3" id="nav-overview">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+        Overview
+      </button>
+      <button onclick="showPage('users')" class="nav-item rounded-xl px-3 py-2.5 text-sm font-medium text-left text-gray-400 flex items-center gap-3" id="nav-users">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+        Users
+      </button>
+      <button onclick="showPage('activity')" class="nav-item rounded-xl px-3 py-2.5 text-sm font-medium text-left text-gray-400 flex items-center gap-3" id="nav-activity">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        Activity
+      </button>
+      <button onclick="showPage('revenue')" class="nav-item rounded-xl px-3 py-2.5 text-sm font-medium text-left text-gray-400 flex items-center gap-3" id="nav-revenue">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        Revenue
+      </button>
+    </nav>
+    <div class="mt-auto pt-4 border-t border-white/05">
+      <div id="admin-user-info" class="px-2 py-2 text-xs text-gray-500">Not logged in</div>
+      <button onclick="adminLogout()" class="nav-item rounded-xl px-3 py-2.5 text-sm font-medium text-left text-red-400 flex items-center gap-3 w-full mt-1">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        Log Out
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="ml-64 flex-1 p-8" id="main-content">
+
+    <!-- Login Screen -->
+    <div id="login-screen" class="flex items-center justify-center min-h-screen -mt-8">
+      <div class="card p-8 w-full max-w-sm">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: linear-gradient(135deg, #6C5CE7, #A29BFE)">
+            <span class="text-white font-bold text-xl">A</span>
+          </div>
+          <div class="text-xl font-bold">Aura Admin</div>
+        </div>
+        <div id="login-error" class="hidden mb-4 px-3 py-2 rounded-lg text-sm" style="background: rgba(255,107,107,0.1); color: #FF6B6B;"></div>
+        <div class="mb-4">
+          <label class="block text-xs text-gray-400 mb-1">Email</label>
+          <input type="email" id="login-email" value="demo@aura.app" class="w-full px-3 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-purple-500" placeholder="admin@aura.app" />
+        </div>
+        <div class="mb-6">
+          <label class="block text-xs text-gray-400 mb-1">Password</label>
+          <input type="password" id="login-password" value="Demo1234!" class="w-full px-3 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-purple-500" placeholder="••••••••" />
+        </div>
+        <button id="login-btn" class="w-full py-3 rounded-xl font-semibold text-sm" style="background: linear-gradient(135deg, #6C5CE7, #A29BFE)">
+          Sign In
+        </button>
+      </div>
+    </div>
+
+    <!-- Overview Page -->
+    <div id="page-overview" class="hidden">
+      <div class="flex items-center justify-between mb-8">
+        <div>
+          <h1 class="text-2xl font-bold">Overview</h1>
+          <p class="text-gray-400 text-sm mt-1">Platform health at a glance</p>
+        </div>
+        <button onclick="loadStats()" class="px-4 py-2 rounded-xl text-sm font-medium border border-white/10 text-gray-300 hover:bg-white/5">Refresh</button>
+      </div>
+
+      <!-- Stats cards -->
+      <div class="grid grid-cols-4 gap-4 mb-8" id="stats-cards">
+        <div class="stat-card card p-5"><div class="text-xs text-gray-400 mb-2">Total Users</div><div class="text-3xl font-bold" id="stat-total-users">—</div><div class="text-xs text-green-400 mt-1" id="stat-new-users"></div></div>
+        <div class="stat-card card p-5"><div class="text-xs text-gray-400 mb-2">Pro Users</div><div class="text-3xl font-bold text-yellow-400" id="stat-pro-users">—</div><div class="text-xs text-gray-400 mt-1" id="stat-conversion"></div></div>
+        <div class="stat-card card p-5"><div class="text-xs text-gray-400 mb-2">Monthly Revenue</div><div class="text-3xl font-bold text-green-400" id="stat-mrr">—</div><div class="text-xs text-gray-400 mt-1" id="stat-arr"></div></div>
+        <div class="stat-card card p-5"><div class="text-xs text-gray-400 mb-2">Total Content</div><div class="text-3xl font-bold text-purple-400" id="stat-content">—</div><div class="text-xs text-gray-400 mt-1" id="stat-content-detail"></div></div>
+      </div>
+
+      <!-- Chart + Breakdown -->
+      <div class="grid grid-cols-3 gap-4 mb-8">
+        <div class="card p-5 col-span-2">
+          <div class="text-sm font-semibold mb-4">User Distribution</div>
+          <canvas id="usersChart" height="160"></canvas>
+        </div>
+        <div class="card p-5">
+          <div class="text-sm font-semibold mb-4">Content Breakdown</div>
+          <canvas id="contentChart" height="160"></canvas>
+        </div>
+      </div>
+
+      <!-- Quick actions -->
+      <div class="card p-5">
+        <div class="text-sm font-semibold mb-4">Quick Actions</div>
+        <div class="flex gap-3">
+          <button onclick="showPage('users')" class="px-4 py-2 rounded-xl text-sm font-medium" style="background: rgba(108,92,231,0.2); color: #A29BFE; border: 1px solid rgba(108,92,231,0.3)">Manage Users</button>
+          <button onclick="showPage('activity')" class="px-4 py-2 rounded-xl text-sm font-medium" style="background: rgba(0,210,255,0.1); color: #00D2FF; border: 1px solid rgba(0,210,255,0.2)">View Activity</button>
+          <button onclick="showPage('revenue')" class="px-4 py-2 rounded-xl text-sm font-medium" style="background: rgba(0,184,148,0.1); color: #00B894; border: 1px solid rgba(0,184,148,0.2)">Revenue Details</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Users Page -->
+    <div id="page-users" class="hidden">
+      <div class="flex items-center justify-between mb-8">
+        <div>
+          <h1 class="text-2xl font-bold">Users</h1>
+          <p class="text-gray-400 text-sm mt-1">Manage all registered users</p>
+        </div>
+        <div class="flex gap-3">
+          <input type="text" id="user-search" placeholder="Search users..." onkeyup="searchUsers(this.value)" class="px-3 py-2 rounded-xl text-sm w-56 outline-none focus:ring-2 focus:ring-purple-500" />
+          <button onclick="loadUsers()" class="px-4 py-2 rounded-xl text-sm font-medium border border-white/10 text-gray-300 hover:bg-white/5">Refresh</button>
+        </div>
+      </div>
+      <div class="card overflow-hidden">
+        <table class="w-full">
+          <thead>
+            <tr class="border-b border-white/05">
+              <th class="text-left px-5 py-3 text-xs text-gray-400 font-medium">User</th>
+              <th class="text-left px-5 py-3 text-xs text-gray-400 font-medium">Plan</th>
+              <th class="text-left px-5 py-3 text-xs text-gray-400 font-medium">Status</th>
+              <th class="text-left px-5 py-3 text-xs text-gray-400 font-medium">Tasks</th>
+              <th class="text-left px-5 py-3 text-xs text-gray-400 font-medium">Joined</th>
+              <th class="text-left px-5 py-3 text-xs text-gray-400 font-medium">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="users-table-body">
+            <tr><td colspan="6" class="text-center py-12 text-gray-500">Loading users...</td></tr>
+          </tbody>
+        </table>
+        <div class="flex items-center justify-between px-5 py-3 border-t border-white/05">
+          <div class="text-xs text-gray-400" id="users-pagination-info">—</div>
+          <div class="flex gap-2">
+            <button onclick="usersPage(-1)" class="px-3 py-1.5 rounded-lg text-xs border border-white/10 text-gray-400 hover:bg-white/5">Previous</button>
+            <button onclick="usersPage(1)" class="px-3 py-1.5 rounded-lg text-xs border border-white/10 text-gray-400 hover:bg-white/5">Next</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Activity Page -->
+    <div id="page-activity" class="hidden">
+      <div class="flex items-center justify-between mb-8">
+        <div>
+          <h1 class="text-2xl font-bold">Recent Activity</h1>
+          <p class="text-gray-400 text-sm mt-1">Latest actions across all modules</p>
+        </div>
+        <button onclick="loadActivity()" class="px-4 py-2 rounded-xl text-sm font-medium border border-white/10 text-gray-300 hover:bg-white/5">Refresh</button>
+      </div>
+      <div class="grid grid-cols-3 gap-4" id="activity-columns">
+        <div class="card p-5">
+          <div class="text-sm font-semibold mb-4 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-blue-400 inline-block"></span>Recent Tasks
+          </div>
+          <div id="activity-tasks" class="space-y-3 text-sm text-gray-400">Loading...</div>
+        </div>
+        <div class="card p-5">
+          <div class="text-sm font-semibold mb-4 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-pink-400 inline-block"></span>Recent Workouts
+          </div>
+          <div id="activity-workouts" class="space-y-3 text-sm text-gray-400">Loading...</div>
+        </div>
+        <div class="card p-5">
+          <div class="text-sm font-semibold mb-4 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-green-400 inline-block"></span>Recent Transactions
+          </div>
+          <div id="activity-transactions" class="space-y-3 text-sm text-gray-400">Loading...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Revenue Page -->
+    <div id="page-revenue" class="hidden">
+      <div class="flex items-center justify-between mb-8">
+        <div>
+          <h1 class="text-2xl font-bold">Revenue</h1>
+          <p class="text-gray-400 text-sm mt-1">Subscription and billing overview</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-3 gap-4 mb-8">
+        <div class="stat-card card p-6">
+          <div class="text-xs text-gray-400 mb-2">Monthly Recurring Revenue</div>
+          <div class="text-4xl font-bold text-green-400" id="rev-mrr">—</div>
+          <div class="text-xs text-gray-400 mt-2">Based on active Pro subscriptions</div>
+        </div>
+        <div class="stat-card card p-6">
+          <div class="text-xs text-gray-400 mb-2">Annual Recurring Revenue</div>
+          <div class="text-4xl font-bold text-blue-400" id="rev-arr">—</div>
+          <div class="text-xs text-gray-400 mt-2">Annualized from current MRR</div>
+        </div>
+        <div class="stat-card card p-6">
+          <div class="text-xs text-gray-400 mb-2">Conversion Rate</div>
+          <div class="text-4xl font-bold text-yellow-400" id="rev-conversion">—</div>
+          <div class="text-xs text-gray-400 mt-2">Free → Pro conversion</div>
+        </div>
+      </div>
+      <div class="card p-6">
+        <div class="text-sm font-semibold mb-6">Subscription Breakdown</div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <canvas id="revenueChart" height="200"></canvas>
+          </div>
+          <div class="space-y-4" id="revenue-breakdown">Loading...</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const API = 'http://localhost:3000/api/v1';
+    let token = localStorage.getItem('admin_token') || '';
+    let currentPage = 1;
+    let totalPages = 1;
+    let searchQuery = '';
+    let statsData = null;
+    let usersChart, contentChart, revenueChart;
+
+    function api(path, opts = {}) {
+      return fetch(API + path, {
+        ...opts,
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...(opts.headers || {}) },
+      }).then(r => r.json());
+    }
+
+    async function adminLogin() {
+      const email = document.getElementById('login-email').value;
+      const pwd = document.getElementById('login-password').value;
+      const btn = document.getElementById('login-btn');
+      btn.textContent = 'Signing in...';
+      try {
+        const res = await fetch(API + '/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password: pwd }),
+        }).then(r => r.json());
+        if (res.accessToken) {
+          token = res.accessToken;
+          localStorage.setItem('admin_token', token);
+          document.getElementById('admin-user-info').textContent = res.user?.email || email;
+          showDashboard();
+        } else {
+          const errEl = document.getElementById('login-error');
+          errEl.textContent = res.message || 'Invalid credentials';
+          errEl.classList.remove('hidden');
+        }
+      } catch(e) {
+        console.error(e);
+      } finally {
+        btn.textContent = 'Sign In';
+      }
+    }
+
+    function adminLogout() {
+      token = ''; localStorage.removeItem('admin_token');
+      document.getElementById('login-screen').classList.remove('hidden');
+      ['overview','users','activity','revenue'].forEach(p => document.getElementById('page-'+p).classList.add('hidden'));
+    }
+
+    function showDashboard() {
+      document.getElementById('login-screen').classList.add('hidden');
+      showPage('overview');
+    }
+
+    function showPage(page) {
+      ['overview','users','activity','revenue'].forEach(p => {
+        document.getElementById('page-'+p).classList.add('hidden');
+        const nav = document.getElementById('nav-'+p);
+        if (nav) { nav.classList.remove('active'); nav.classList.add('text-gray-400'); }
+      });
+      document.getElementById('page-'+page).classList.remove('hidden');
+      const activeNav = document.getElementById('nav-'+page);
+      if (activeNav) { activeNav.classList.add('active'); activeNav.classList.remove('text-gray-400'); }
+      if (page === 'overview') loadStats();
+      if (page === 'users') loadUsers();
+      if (page === 'activity') loadActivity();
+      if (page === 'revenue') loadRevenue();
+    }
+
+    async function loadStats() {
+      try {
+        const data = await api('/admin/stats');
+        statsData = data;
+        document.getElementById('stat-total-users').textContent = data.users.total;
+        document.getElementById('stat-new-users').textContent = '+' + data.users.newThisWeek + ' this week';
+        document.getElementById('stat-pro-users').textContent = data.users.pro;
+        document.getElementById('stat-conversion').textContent = data.revenue.conversionRate + '% conversion';
+        document.getElementById('stat-mrr').textContent = '$' + data.revenue.mrr.toFixed(2);
+        document.getElementById('stat-arr').textContent = 'ARR $' + data.revenue.arr.toFixed(0);
+        const total = data.content.tasks + data.content.habits + data.content.workouts + data.content.transactions;
+        document.getElementById('stat-content').textContent = total;
+        document.getElementById('stat-content-detail').textContent = data.content.tasks + ' tasks · ' + data.content.habits + ' habits';
+        drawOverviewCharts(data);
+      } catch(e) { console.error(e); }
+    }
+
+    function drawOverviewCharts(data) {
+      const ctx1 = document.getElementById('usersChart').getContext('2d');
+      if (usersChart) usersChart.destroy();
+      usersChart = new Chart(ctx1, {
+        type: 'doughnut',
+        data: {
+          labels: ['Free Users', 'Pro Users'],
+          datasets: [{ data: [data.users.free, data.users.pro], backgroundColor: ['rgba(108,92,231,0.5)', '#F7C948'], borderWidth: 0 }],
+        },
+        options: { plugins: { legend: { labels: { color: '#A0A0B8', font: { size: 12 } } } }, cutout: '70%' }
+      });
+
+      const ctx2 = document.getElementById('contentChart').getContext('2d');
+      if (contentChart) contentChart.destroy();
+      contentChart = new Chart(ctx2, {
+        type: 'bar',
+        data: {
+          labels: ['Tasks', 'Habits', 'Workouts', 'Transactions'],
+          datasets: [{ data: [data.content.tasks, data.content.habits, data.content.workouts, data.content.transactions], backgroundColor: ['#74B9FF','#00B894','#FF9FF3','#FDCB6E'], borderRadius: 6, borderWidth: 0 }],
+        },
+        options: {
+          plugins: { legend: { display: false } },
+          scales: { x: { ticks: { color: '#6C6C80', font: { size: 10 } }, grid: { display: false } }, y: { ticks: { color: '#6C6C80' }, grid: { color: 'rgba(255,255,255,0.04)' } } }
+        }
+      });
+    }
+
+    async function loadUsers() {
+      const body = document.getElementById('users-table-body');
+      body.innerHTML = '<tr><td colspan="6" class="text-center py-12 text-gray-500">Loading...</td></tr>';
+      try {
+        const data = await api(`/admin/users?page=${currentPage}&limit=10${searchQuery ? '&search='+encodeURIComponent(searchQuery) : ''}`);
+        totalPages = data.pages;
+        document.getElementById('users-pagination-info').textContent = `Showing ${data.users.length} of ${data.total} users (page ${data.page} of ${data.pages})`;
+        if (!data.users?.length) {
+          body.innerHTML = '<tr><td colspan="6" class="text-center py-12 text-gray-500">No users found</td></tr>';
+          return;
+        }
+        body.innerHTML = data.users.map(u => `
+          <tr class="border-t border-white/03">
+            <td class="px-5 py-3.5">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold" style="background: rgba(108,92,231,0.2); color: #A29BFE">${(u.fullName||u.email)[0].toUpperCase()}</div>
+                <div>
+                  <div class="text-sm font-medium">${u.fullName || '—'}</div>
+                  <div class="text-xs text-gray-400">${u.email}</div>
+                </div>
+              </div>
+            </td>
+            <td class="px-5 py-3.5"><span class="text-xs px-2 py-1 rounded-lg font-medium ${u.subscriptionTier === 'pro' ? 'badge-pro' : 'badge-free'}">${u.subscriptionTier}</span></td>
+            <td class="px-5 py-3.5"><span class="text-xs px-2 py-1 rounded-lg font-medium ${u.isActive ? 'badge-active' : 'badge-inactive'}">${u.isActive ? 'Active' : 'Inactive'}</span></td>
+            <td class="px-5 py-3.5 text-sm text-gray-300">${u._count?.tasks ?? 0}</td>
+            <td class="px-5 py-3.5 text-xs text-gray-400">${new Date(u.createdAt).toLocaleDateString()}</td>
+            <td class="px-5 py-3.5">
+              <div class="flex gap-2">
+                <button onclick="toggleUserTier('${u.id}', '${u.subscriptionTier}')" class="text-xs px-2.5 py-1 rounded-lg border border-white/10 text-gray-300 hover:bg-white/5">
+                  ${u.subscriptionTier === 'pro' ? 'Downgrade' : 'Upgrade'}
+                </button>
+                <button onclick="toggleUserStatus('${u.id}', ${u.isActive})" class="text-xs px-2.5 py-1 rounded-lg border border-white/10 ${u.isActive ? 'text-red-400' : 'text-green-400'} hover:bg-white/5">
+                  ${u.isActive ? 'Disable' : 'Enable'}
+                </button>
+              </div>
+            </td>
+          </tr>
+        `).join('');
+      } catch(e) {
+        body.innerHTML = '<tr><td colspan="6" class="text-center py-12 text-red-400">Failed to load users</td></tr>';
+      }
+    }
+
+    let searchTimer;
+    function searchUsers(q) { searchQuery = q; currentPage = 1; clearTimeout(searchTimer); searchTimer = setTimeout(loadUsers, 300); }
+    function usersPage(dir) { currentPage = Math.max(1, Math.min(totalPages, currentPage + dir)); loadUsers(); }
+
+    async function toggleUserTier(id, current) {
+      const tier = current === 'pro' ? 'free' : 'pro';
+      await api(`/admin/users/${id}/subscription`, { method: 'PATCH', body: JSON.stringify({ tier }) });
+      loadUsers();
+    }
+
+    async function toggleUserStatus(id, current) {
+      await api(`/admin/users/${id}/status`, { method: 'PATCH', body: JSON.stringify({ isActive: !current }) });
+      loadUsers();
+    }
+
+    async function loadActivity() {
+      try {
+        const data = await api('/admin/activity');
+        const fmt = d => new Date(d).toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+        document.getElementById('activity-tasks').innerHTML = data.recentTasks.map(t =>
+          `<div class="pb-3 border-b border-white/05"><div class="text-white text-sm">${t.title}</div><div class="text-xs mt-0.5">${t.user?.email} · ${fmt(t.createdAt)}</div></div>`
+        ).join('') || '<div class="text-center text-gray-600 py-4">No tasks</div>';
+        document.getElementById('activity-workouts').innerHTML = data.recentWorkouts.map(w =>
+          `<div class="pb-3 border-b border-white/05"><div class="text-white text-sm capitalize">${w.sportType}</div><div class="text-xs mt-0.5">${w.user?.email} · ${fmt(w.completedAt)}</div></div>`
+        ).join('') || '<div class="text-center text-gray-600 py-4">No workouts</div>';
+        document.getElementById('activity-transactions').innerHTML = data.recentTransactions.map(t =>
+          `<div class="pb-3 border-b border-white/05"><div class="text-white text-sm">${t.description || 'Transaction'} <span class="${t.amount > 0 ? 'text-green-400' : 'text-red-400'}">$${Math.abs(t.amount).toFixed(2)}</span></div><div class="text-xs mt-0.5">${t.user?.email} · ${fmt(t.transactionDate)}</div></div>`
+        ).join('') || '<div class="text-center text-gray-600 py-4">No transactions</div>';
+      } catch(e) { console.error(e); }
+    }
+
+    async function loadRevenue() {
+      try {
+        const data = await api('/admin/stats');
+        document.getElementById('rev-mrr').textContent = '$' + data.revenue.mrr.toFixed(2);
+        document.getElementById('rev-arr').textContent = '$' + data.revenue.arr.toFixed(0);
+        document.getElementById('rev-conversion').textContent = data.revenue.conversionRate + '%';
+        document.getElementById('revenue-breakdown').innerHTML = `
+          <div class="flex justify-between items-center py-3 border-b border-white/05">
+            <span class="text-sm text-gray-300">Free Users</span><span class="font-semibold">${data.users.free}</span>
+          </div>
+          <div class="flex justify-between items-center py-3 border-b border-white/05">
+            <span class="text-sm text-yellow-400">Pro Users</span><span class="font-semibold text-yellow-400">${data.users.pro}</span>
+          </div>
+          <div class="flex justify-between items-center py-3 border-b border-white/05">
+            <span class="text-sm text-gray-300">Pro Price</span><span class="font-semibold">$9.99/mo</span>
+          </div>
+          <div class="flex justify-between items-center py-3">
+            <span class="text-sm text-green-400">MRR</span><span class="font-bold text-green-400">$${data.revenue.mrr.toFixed(2)}</span>
+          </div>
+        `;
+        const ctx = document.getElementById('revenueChart').getContext('2d');
+        if (revenueChart) revenueChart.destroy();
+        revenueChart = new Chart(ctx, {
+          type: 'pie',
+          data: {
+            labels: ['Free', 'Pro'],
+            datasets: [{ data: [data.users.free, data.users.pro], backgroundColor: ['rgba(108,92,231,0.4)', '#F7C948'], borderWidth: 0 }],
+          },
+          options: { plugins: { legend: { labels: { color: '#A0A0B8' } } } }
+        });
+      } catch(e) { console.error(e); }
+    }
+
+    // Auto-login if token exists
+    window.onload = () => {
+      // Wire up login button click
+      document.getElementById('login-btn').addEventListener('click', adminLogin);
+      document.getElementById('login-password')?.addEventListener('keyup', e => { if (e.key === 'Enter') adminLogin(); });
+
+      if (token) {
+        api('/users/me').then(u => {
+          if (u.email) {
+            document.getElementById('admin-user-info').textContent = u.email;
+            showDashboard();
+          } else { token = ''; localStorage.removeItem('admin_token'); }
+        }).catch(() => { token = ''; });
+      }
+    };
+  </script>
+</body>
+</html>

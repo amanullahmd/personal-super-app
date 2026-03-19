@@ -1,0 +1,1111 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgvector(map: "vector")]
+}
+
+// ============================================================
+// CORE: Users & Auth
+// ============================================================
+
+model User {
+  id                   String    @id @default(uuid()) @db.Uuid
+  email                String    @unique
+  phone                String?   @unique
+  passwordHash         String    @map("password_hash")
+  fullName             String    @map("full_name")
+  avatarUrl            String?   @map("avatar_url")
+  dateOfBirth          DateTime? @map("date_of_birth") @db.Date
+  gender               Gender?
+  timezone             String    @default("UTC")
+  locale               String    @default("en")
+  subscriptionTier     SubTier   @default(free) @map("subscription_tier")
+  subscriptionExpiresAt DateTime? @map("subscription_expires_at")
+  onboardingCompleted  Boolean   @default(false) @map("onboarding_completed")
+  isActive             Boolean   @default(true) @map("is_active")
+  lastLoginAt          DateTime? @map("last_login_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  preferences      UserPreference?
+  refreshTokens    RefreshToken[]
+  healthProfile    HealthProfile?
+  healthLogs       HealthLog[]
+  workouts         Workout[]
+  sleepLogs        SleepLog[]
+  mealPlans        MealPlan[]
+  mealLogs         MealLog[]
+  waterLogs        WaterLog[]
+  habits           Habit[]
+  habitCompletions HabitCompletion[]
+  tasks            Task[]
+  projects         Project[]
+  calendarEvents   CalendarEvent[]
+  timeTrackings    TimeTracking[]
+  notes            Note[]
+  noteFolders      NoteFolder[]
+  learningGoals    LearningGoal[]
+  learningSessions LearningSession[]
+  flashcardDecks   FlashcardDeck[]
+  financialAccounts FinancialAccount[]
+  transactions     Transaction[]
+  budgets          Budget[]
+  savingsGoals     SavingsGoal[]
+  sportsProfile    SportsProfile?
+  sportsActivities SportsActivity[]
+  trainingPlans    TrainingPlan[]
+  moodLogs         MoodLog[]
+  journalEntries   JournalEntry[]
+  meditationSessions MeditationSession[]
+  contacts         Contact[]
+  aiConversations  AiConversation[]
+  aiMemories       AiMemory[]
+  aiProfile        AiUserProfile?
+  achievements     UserAchievement[]
+  xp               UserXp?
+  subscription     Subscription?
+  notifications    Notification[]
+
+  @@map("users")
+}
+
+model UserPreference {
+  userId               String   @id @map("user_id") @db.Uuid
+  theme                Theme    @default(dark)
+  accentColor          String   @default("#6C5CE7") @map("accent_color")
+  dashboardLayout      Json?    @map("dashboard_layout")
+  activeModules        Json     @default("[\"health\",\"meals\",\"habits\",\"tasks\"]") @map("active_modules")
+  notificationSettings Json?    @map("notification_settings")
+  voiceAssistantEnabled Boolean @default(false) @map("voice_assistant_enabled")
+  voiceId              String?  @map("voice_id")
+  units                Units    @default(metric)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+// ============================================================
+// MODULE: AI System
+// ============================================================
+
+model AiConversation {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  title         String?
+  moduleContext String?   @map("module_context")
+  summary       String?
+  startedAt     DateTime  @default(now()) @map("started_at")
+  endedAt       DateTime? @map("ended_at")
+
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages AiMessage[]
+
+  @@map("ai_conversations")
+}
+
+model AiMessage {
+  id             String   @id @default(uuid()) @db.Uuid
+  conversationId String   @map("conversation_id") @db.Uuid
+  role           AiRole
+  content        String
+  tokensUsed     Int?     @map("tokens_used")
+  modelUsed      String?  @map("model_used")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  conversation AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@map("ai_messages")
+}
+
+model AiMemory {
+  id              String        @id @default(uuid()) @db.Uuid
+  userId          String        @map("user_id") @db.Uuid
+  content         String
+  embedding       Unsupported("vector(1536)")?
+  sourceType      MemorySource  @map("source_type")
+  sourceId        String?       @map("source_id")
+  category        MemoryCategory
+  importanceScore Float         @default(0.5) @map("importance_score")
+  lastAccessedAt  DateTime?     @map("last_accessed_at")
+  expiresAt       DateTime?     @map("expires_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("ai_memories")
+}
+
+model AiUserProfile {
+  userId              String  @id @map("user_id") @db.Uuid
+  personalitySummary  String? @map("personality_summary")
+  communicationStyle  CommStyle @default(casual) @map("communication_style")
+  goalsSummary        String? @map("goals_summary")
+  knownPreferences    Json?   @map("known_preferences")
+  healthContext       Json?   @map("health_context")
+  professionalContext Json?   @map("professional_context")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("ai_user_profiles")
+}
+
+// ============================================================
+// MODULE: Health & Fitness
+// ============================================================
+
+model HealthProfile {
+  userId           String       @id @map("user_id") @db.Uuid
+  heightCm         Float?       @map("height_cm")
+  weightKg         Float?       @map("weight_kg")
+  bloodType        String?      @map("blood_type")
+  allergies        Json?
+  medicalConditions Json?       @map("medical_conditions")
+  fitnessLevel     FitnessLevel @default(beginner) @map("fitness_level")
+  dailyCalorieGoal Int?         @map("daily_calorie_goal")
+  dailyWaterGoalMl Int          @default(2000) @map("daily_water_goal_ml")
+  dailyStepsGoal   Int          @default(10000) @map("daily_steps_goal")
+  sleepGoalHours   Float        @default(8) @map("sleep_goal_hours")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("health_profiles")
+}
+
+model HealthLog {
+  id         String       @id @default(uuid()) @db.Uuid
+  userId     String       @map("user_id") @db.Uuid
+  metricType HealthMetric @map("metric_type")
+  value      Float
+  unit       String
+  metadata   Json?
+  source     DataSource   @default(manual)
+  loggedAt   DateTime     @default(now()) @map("logged_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, metricType, loggedAt])
+  @@map("health_logs")
+}
+
+model Workout {
+  id             String        @id @default(uuid()) @db.Uuid
+  userId         String        @map("user_id") @db.Uuid
+  workoutType    WorkoutType   @map("workout_type")
+  title          String
+  durationMinutes Int          @map("duration_minutes")
+  caloriesBurned Int?          @map("calories_burned")
+  intensity      Intensity     @default(medium)
+  exercises      Json?
+  notes          String?
+  heartRateAvg   Int?          @map("heart_rate_avg")
+  heartRateMax   Int?          @map("heart_rate_max")
+  completedAt    DateTime      @default(now()) @map("completed_at")
+  createdAt      DateTime      @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, completedAt])
+  @@map("workouts")
+}
+
+model SleepLog {
+  id                String     @id @default(uuid()) @db.Uuid
+  userId            String     @map("user_id") @db.Uuid
+  sleepStart        DateTime   @map("sleep_start")
+  sleepEnd          DateTime   @map("sleep_end")
+  durationMinutes   Int        @map("duration_minutes")
+  qualityScore      Int?       @map("quality_score")
+  deepSleepMinutes  Int?       @map("deep_sleep_minutes")
+  remSleepMinutes   Int?       @map("rem_sleep_minutes")
+  lightSleepMinutes Int?       @map("light_sleep_minutes")
+  awakeMinutes      Int?       @map("awake_minutes")
+  source            DataSource @default(manual)
+  notes             String?
+  createdAt         DateTime   @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, sleepStart])
+  @@map("sleep_logs")
+}
+
+// ============================================================
+// MODULE: Meals & Nutrition
+// ============================================================
+
+model MealPlan {
+  id                 String    @id @default(uuid()) @db.Uuid
+  userId             String    @map("user_id") @db.Uuid
+  name               String
+  dietType           DietType  @map("diet_type")
+  dailyCalorieTarget Int?      @map("daily_calorie_target")
+  macroTargets       Json?     @map("macro_targets")
+  startDate          DateTime? @map("start_date") @db.Date
+  endDate            DateTime? @map("end_date") @db.Date
+  isActive           Boolean   @default(true) @map("is_active")
+  createdAt          DateTime  @default(now()) @map("created_at")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mealLogs MealLog[]
+
+  @@map("meal_plans")
+}
+
+model MealLog {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  mealPlanId     String?  @map("meal_plan_id") @db.Uuid
+  mealType       MealType @map("meal_type")
+  foodItems      Json     @map("food_items")
+  totalCalories  Int      @map("total_calories")
+  totalProtein   Float?   @map("total_protein")
+  totalCarbs     Float?   @map("total_carbs")
+  totalFat       Float?   @map("total_fat")
+  photoUrl       String?  @map("photo_url")
+  aiDetectedFoods Json?   @map("ai_detected_foods")
+  loggedAt       DateTime @default(now()) @map("logged_at")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mealPlan MealPlan? @relation(fields: [mealPlanId], references: [id])
+
+  @@index([userId, loggedAt])
+  @@map("meal_logs")
+}
+
+model WaterLog {
+  id       String   @id @default(uuid()) @db.Uuid
+  userId   String   @map("user_id") @db.Uuid
+  amountMl Int      @map("amount_ml")
+  loggedAt DateTime @default(now()) @map("logged_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, loggedAt])
+  @@map("water_logs")
+}
+
+model Food {
+  id          String  @id @default(uuid()) @db.Uuid
+  name        String
+  brand       String?
+  servingSize Float   @map("serving_size")
+  servingUnit String  @map("serving_unit")
+  calories    Int
+  protein     Float
+  carbs       Float
+  fat         Float
+  fiber       Float?
+  barcode     String?
+  isVerified  Boolean @default(false) @map("is_verified")
+  createdBy   String? @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([name])
+  @@index([barcode])
+  @@map("foods")
+}
+
+// ============================================================
+// MODULE: Habits
+// ============================================================
+
+model Habit {
+  id              String         @id @default(uuid()) @db.Uuid
+  userId          String         @map("user_id") @db.Uuid
+  name            String
+  description     String?
+  icon            String         @default("star")
+  color           String         @default("#6C5CE7")
+  frequency       HabitFrequency @default(daily)
+  frequencyConfig Json?          @map("frequency_config")
+  targetCount     Int            @default(1) @map("target_count")
+  reminderTimes   Json?          @map("reminder_times")
+  category        HabitCategory  @default(custom)
+  isActive        Boolean        @default(true) @map("is_active")
+  streakCurrent   Int            @default(0) @map("streak_current")
+  streakBest      Int            @default(0) @map("streak_best")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  completions HabitCompletion[]
+
+  @@map("habits")
+}
+
+model HabitCompletion {
+  id          String   @id @default(uuid()) @db.Uuid
+  habitId     String   @map("habit_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  completedAt DateTime @default(now()) @map("completed_at")
+  value       Float?
+  note        String?
+
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([habitId, completedAt])
+  @@index([userId, completedAt])
+  @@map("habit_completions")
+}
+
+// ============================================================
+// MODULE: Tasks & Productivity
+// ============================================================
+
+model Project {
+  id              String        @id @default(uuid()) @db.Uuid
+  userId          String        @map("user_id") @db.Uuid
+  name            String
+  description     String?
+  color           String        @default("#74B9FF")
+  icon            String        @default("folder")
+  status          ProjectStatus @default(active)
+  deadline        DateTime?     @db.Date
+  progressPercent Int           @default(0) @map("progress_percent")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks Task[]
+
+  @@map("projects")
+}
+
+model Task {
+  id               String       @id @default(uuid()) @db.Uuid
+  userId           String       @map("user_id") @db.Uuid
+  projectId        String?      @map("project_id") @db.Uuid
+  title            String
+  description      String?
+  priority         Priority     @default(medium)
+  status           TaskStatus   @default(todo)
+  dueDate          DateTime?    @map("due_date") @db.Date
+  dueTime          String?      @map("due_time")
+  tags             Json?
+  estimatedMinutes Int?         @map("estimated_minutes")
+  actualMinutes    Int?         @map("actual_minutes")
+  recurrence       Json?
+  parentTaskId     String?      @map("parent_task_id") @db.Uuid
+  sortOrder        Int          @default(0) @map("sort_order")
+  completedAt      DateTime?    @map("completed_at")
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project? @relation(fields: [projectId], references: [id])
+  parent    Task?   @relation("SubTasks", fields: [parentTaskId], references: [id])
+  subtasks  Task[]  @relation("SubTasks")
+
+  @@index([userId, status, dueDate])
+  @@map("tasks")
+}
+
+model CalendarEvent {
+  id                    String   @id @default(uuid()) @db.Uuid
+  userId                String   @map("user_id") @db.Uuid
+  title                 String
+  description           String?
+  location              String?
+  startTime             DateTime @map("start_time")
+  endTime               DateTime @map("end_time")
+  isAllDay              Boolean  @default(false) @map("is_all_day")
+  recurrenceRule        String?  @map("recurrence_rule")
+  reminderMinutesBefore Json?    @map("reminder_minutes_before")
+  color                 String   @default("#6C5CE7")
+  externalCalendarId    String?  @map("external_calendar_id")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, startTime, endTime])
+  @@map("calendar_events")
+}
+
+model TimeTracking {
+  id              String    @id @default(uuid()) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  category        TimeCategory @default(work)
+  label           String?
+  startedAt       DateTime  @map("started_at")
+  endedAt         DateTime? @map("ended_at")
+  durationMinutes Int?      @map("duration_minutes")
+  notes           String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, startedAt])
+  @@map("time_trackings")
+}
+
+// ============================================================
+// MODULE: Notes
+// ============================================================
+
+model NoteFolder {
+  id       String @id @default(uuid()) @db.Uuid
+  userId   String @map("user_id") @db.Uuid
+  name     String
+  color    String @default("#A29BFE")
+  parentId String? @map("parent_id") @db.Uuid
+
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent   NoteFolder? @relation("SubFolders", fields: [parentId], references: [id])
+  children NoteFolder[] @relation("SubFolders")
+  notes    Note[]
+
+  @@map("note_folders")
+}
+
+model Note {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  folderId       String?  @map("folder_id") @db.Uuid
+  title          String
+  content        String?
+  tags           Json?
+  isPinned       Boolean  @default(false) @map("is_pinned")
+  isArchived     Boolean  @default(false) @map("is_archived")
+  linkedModule   String?  @map("linked_module")
+  linkedRecordId String?  @map("linked_record_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder NoteFolder? @relation(fields: [folderId], references: [id])
+
+  @@index([userId, isPinned, updatedAt])
+  @@map("notes")
+}
+
+// ============================================================
+// MODULE: Education & Learning
+// ============================================================
+
+model LearningGoal {
+  id                  String         @id @default(uuid()) @db.Uuid
+  userId              String         @map("user_id") @db.Uuid
+  title               String
+  category            LearningCategory
+  targetDate          DateTime?      @map("target_date") @db.Date
+  progressPercent     Int            @default(0) @map("progress_percent")
+  dailyTimeGoalMinutes Int           @default(30) @map("daily_time_goal_minutes")
+  status              GoalStatus     @default(active)
+  createdAt           DateTime       @default(now()) @map("created_at")
+  updatedAt           DateTime       @updatedAt @map("updated_at")
+
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions LearningSession[]
+
+  @@map("learning_goals")
+}
+
+model LearningSession {
+  id                String   @id @default(uuid()) @db.Uuid
+  goalId            String   @map("goal_id") @db.Uuid
+  userId            String   @map("user_id") @db.Uuid
+  durationMinutes   Int      @map("duration_minutes")
+  topic             String?
+  notes             String?
+  resourcesUsed     Json?    @map("resources_used")
+  satisfactionScore Int?     @map("satisfaction_score")
+  completedAt       DateTime @default(now()) @map("completed_at")
+
+  goal LearningGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("learning_sessions")
+}
+
+model FlashcardDeck {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  name      String
+  category  String?
+  cardCount Int      @default(0) @map("card_count")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cards Flashcard[]
+
+  @@map("flashcard_decks")
+}
+
+model Flashcard {
+  id          String    @id @default(uuid()) @db.Uuid
+  deckId      String    @map("deck_id") @db.Uuid
+  front       String
+  back        String
+  difficulty  Difficulty @default(medium)
+  nextReviewAt DateTime? @map("next_review_at")
+  reviewCount Int       @default(0) @map("review_count")
+  easeFactor  Float     @default(2.5) @map("ease_factor")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  deck FlashcardDeck @relation(fields: [deckId], references: [id], onDelete: Cascade)
+
+  @@map("flashcards")
+}
+
+// ============================================================
+// MODULE: Finance
+// ============================================================
+
+model FinancialAccount {
+  id       String      @id @default(uuid()) @db.Uuid
+  userId   String      @map("user_id") @db.Uuid
+  name     String
+  type     AccountType
+  currency String      @default("USD")
+  balance  Float       @default(0)
+  icon     String      @default("wallet")
+  color    String      @default("#00D2FF")
+  isActive Boolean     @default(true) @map("is_active")
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@map("financial_accounts")
+}
+
+model Transaction {
+  id              String          @id @default(uuid()) @db.Uuid
+  userId          String          @map("user_id") @db.Uuid
+  accountId       String          @map("account_id") @db.Uuid
+  type            TransactionType
+  amount          Float
+  currency        String          @default("USD")
+  category        ExpenseCategory
+  description     String?
+  isRecurring     Boolean         @default(false) @map("is_recurring")
+  recurrenceRule  String?         @map("recurrence_rule")
+  receiptUrl      String?         @map("receipt_url")
+  transactionDate DateTime        @map("transaction_date") @db.Date
+  createdAt       DateTime        @default(now()) @map("created_at")
+
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account FinancialAccount @relation(fields: [accountId], references: [id])
+
+  @@index([userId, transactionDate])
+  @@index([userId, category])
+  @@map("transactions")
+}
+
+model Budget {
+  id                    String   @id @default(uuid()) @db.Uuid
+  userId                String   @map("user_id") @db.Uuid
+  category              ExpenseCategory
+  amountLimit           Float    @map("amount_limit")
+  period                BudgetPeriod
+  alertThresholdPercent Int      @default(80) @map("alert_threshold_percent")
+  month                 Int
+  year                  Int
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, category, month, year])
+  @@map("budgets")
+}
+
+model SavingsGoal {
+  id               String     @id @default(uuid()) @db.Uuid
+  userId           String     @map("user_id") @db.Uuid
+  name             String
+  targetAmount     Float      @map("target_amount")
+  currentAmount    Float      @default(0) @map("current_amount")
+  targetDate       DateTime?  @map("target_date") @db.Date
+  autoSaveAmount   Float?     @map("auto_save_amount")
+  autoSaveFrequency String?   @map("auto_save_frequency")
+  status           GoalStatus @default(active)
+  createdAt        DateTime   @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("savings_goals")
+}
+
+// ============================================================
+// MODULE: Sports & Activities
+// ============================================================
+
+model SportsProfile {
+  userId              String @id @map("user_id") @db.Uuid
+  primarySports       Json?  @map("primary_sports")
+  skillLevels         Json?  @map("skill_levels")
+  preferredWorkoutTimes Json? @map("preferred_workout_times")
+  injuries            Json?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sports_profiles")
+}
+
+model SportsActivity {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  sportType        String    @map("sport_type")
+  distanceKm       Float?    @map("distance_km")
+  durationMinutes  Int       @map("duration_minutes")
+  caloriesBurned   Int?      @map("calories_burned")
+  avgSpeed         Float?    @map("avg_speed")
+  maxSpeed         Float?    @map("max_speed")
+  routeData        Json?     @map("route_data")
+  weatherConditions Json?    @map("weather_conditions")
+  performanceNotes String?   @map("performance_notes")
+  personalBest     Boolean   @default(false) @map("personal_best")
+  completedAt      DateTime  @default(now()) @map("completed_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, sportType, completedAt])
+  @@map("sports_activities")
+}
+
+model TrainingPlan {
+  id              String       @id @default(uuid()) @db.Uuid
+  userId          String       @map("user_id") @db.Uuid
+  name            String
+  sportType       String       @map("sport_type")
+  goal            String?
+  weeksDuration   Int          @map("weeks_duration")
+  schedule        Json
+  aiGenerated     Boolean      @default(false) @map("ai_generated")
+  status          GoalStatus   @default(active)
+  startedAt       DateTime     @default(now()) @map("started_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("training_plans")
+}
+
+// ============================================================
+// MODULE: Mental Wellness
+// ============================================================
+
+model MoodLog {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  moodScore    Int      @map("mood_score")
+  emotions     Json?
+  energyLevel  Int?     @map("energy_level")
+  stressLevel  Int?     @map("stress_level")
+  triggers     Json?
+  journalEntry String?  @map("journal_entry")
+  loggedAt     DateTime @default(now()) @map("logged_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, loggedAt])
+  @@map("mood_logs")
+}
+
+model JournalEntry {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  title          String?
+  content        String
+  moodScore      Int?     @map("mood_score")
+  gratitudeItems Json?    @map("gratitude_items")
+  tags           Json?
+  isPrivate      Boolean  @default(true) @map("is_private")
+  aiInsights     String?  @map("ai_insights")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("journal_entries")
+}
+
+model MeditationSession {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  type            MeditationType
+  durationMinutes Int      @map("duration_minutes")
+  moodBefore      Int?     @map("mood_before")
+  moodAfter       Int?     @map("mood_after")
+  completedAt     DateTime @default(now()) @map("completed_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("meditation_sessions")
+}
+
+// ============================================================
+// MODULE: Social & Contacts
+// ============================================================
+
+model Contact {
+  id                    String    @id @default(uuid()) @db.Uuid
+  userId                String    @map("user_id") @db.Uuid
+  name                  String
+  relationship          RelationType
+  birthday              DateTime? @db.Date
+  importantDates        Json?     @map("important_dates")
+  notes                 String?
+  lastContactedAt       DateTime? @map("last_contacted_at")
+  contactFrequencyGoal  ContactFreq? @map("contact_frequency_goal")
+  createdAt             DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("contacts")
+}
+
+// ============================================================
+// MODULE: Gamification
+// ============================================================
+
+model Achievement {
+  id          String @id @default(uuid()) @db.Uuid
+  name        String
+  description String
+  iconUrl     String? @map("icon_url")
+  category    String
+  criteria    Json
+  xpReward    Int    @map("xp_reward")
+
+  users UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  achievementId   String   @map("achievement_id") @db.Uuid
+  unlockedAt      DateTime @default(now()) @map("unlocked_at")
+  progressPercent Int      @default(0) @map("progress_percent")
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id])
+
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}
+
+model UserXp {
+  userId       String @id @map("user_id") @db.Uuid
+  totalXp      Int    @default(0) @map("total_xp")
+  level        Int    @default(1)
+  xpToNextLevel Int   @default(100) @map("xp_to_next_level")
+  weeklyXp     Json?  @map("weekly_xp")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_xp")
+}
+
+// ============================================================
+// MODULE: Subscription
+// ============================================================
+
+model Subscription {
+  id                     String       @id @default(uuid()) @db.Uuid
+  userId                 String       @unique @map("user_id") @db.Uuid
+  plan                   SubPlan
+  status                 SubStatus    @default(active)
+  paymentProvider        String?      @map("payment_provider")
+  providerSubscriptionId String?      @map("provider_subscription_id")
+  currentPeriodStart     DateTime?    @map("current_period_start")
+  currentPeriodEnd       DateTime?    @map("current_period_end")
+  trialEndsAt            DateTime?    @map("trial_ends_at")
+  cancelledAt            DateTime?    @map("cancelled_at")
+  createdAt              DateTime     @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+// ============================================================
+// MODULE: Notifications
+// ============================================================
+
+model Notification {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  title     String
+  body      String
+  type      String
+  data      Json?
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, createdAt])
+  @@map("notifications")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum Gender {
+  male
+  female
+  other
+  prefer_not_to_say
+}
+
+enum SubTier {
+  free
+  pro
+  family
+}
+
+enum Theme {
+  light
+  dark
+  auto
+}
+
+enum Units {
+  metric
+  imperial
+}
+
+enum AiRole {
+  user
+  assistant
+  system
+}
+
+enum MemorySource {
+  conversation
+  module_data
+  user_input
+}
+
+enum MemoryCategory {
+  preference
+  health_insight
+  habit_pattern
+  professional_note
+  personal_fact
+  financial_insight
+  learning_progress
+}
+
+enum CommStyle {
+  formal
+  casual
+  motivational
+}
+
+enum FitnessLevel {
+  beginner
+  intermediate
+  advanced
+}
+
+enum HealthMetric {
+  weight
+  blood_pressure
+  heart_rate
+  blood_sugar
+  temperature
+  spo2
+  steps
+  water_intake
+}
+
+enum DataSource {
+  manual
+  wearable
+  import_data
+}
+
+enum WorkoutType {
+  cardio
+  strength
+  flexibility
+  sports
+  yoga
+  swimming
+  cycling
+  running
+  hiit
+  custom
+}
+
+enum Intensity {
+  low
+  medium
+  high
+}
+
+enum DietType {
+  balanced
+  keto
+  vegan
+  vegetarian
+  paleo
+  mediterranean
+  custom
+}
+
+enum MealType {
+  breakfast
+  lunch
+  dinner
+  snack
+}
+
+enum HabitFrequency {
+  daily
+  weekly
+  custom
+}
+
+enum HabitCategory {
+  health
+  productivity
+  learning
+  mindfulness
+  fitness
+  social
+  custom
+}
+
+enum ProjectStatus {
+  active
+  completed
+  archived
+}
+
+enum TaskStatus {
+  todo
+  in_progress
+  done
+  archived
+}
+
+enum Priority {
+  urgent
+  high
+  medium
+  low
+}
+
+enum TimeCategory {
+  work
+  study
+  personal
+  break_time
+}
+
+enum LearningCategory {
+  language
+  programming
+  instrument
+  academic
+  certification
+  skill
+}
+
+enum GoalStatus {
+  active
+  completed
+  paused
+  abandoned
+}
+
+enum Difficulty {
+  easy
+  medium
+  hard
+}
+
+enum AccountType {
+  checking
+  savings
+  credit
+  cash
+  investment
+}
+
+enum TransactionType {
+  income
+  expense
+  transfer
+}
+
+enum ExpenseCategory {
+  food
+  transport
+  rent
+  utilities
+  salary
+  freelance
+  entertainment
+  health
+  education
+  shopping
+  travel
+  subscriptions
+  other
+}
+
+enum BudgetPeriod {
+  weekly
+  monthly
+  yearly
+}
+
+enum MeditationType {
+  guided
+  unguided
+  breathing
+  body_scan
+}
+
+enum RelationType {
+  family
+  friend
+  colleague
+  partner
+  other
+}
+
+enum ContactFreq {
+  weekly
+  biweekly
+  monthly
+  quarterly
+}
+
+enum SubPlan {
+  free
+  pro_monthly
+  pro_yearly
+  family
+}
+
+enum SubStatus {
+  active
+  cancelled
+  expired
+  trial
+}

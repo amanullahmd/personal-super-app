@@ -1,0 +1,40 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Aura Mobile (Expo Web)",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["node_modules/expo/bin/cli", "start", "--web", "--port", "8081"],
+      "port": 8081,
+      "cwd": "aura-mobile"
+    },
+    {
+      "name": "Prisma Dev Server (DB)",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["node_modules/prisma/build/index.js", "dev"],
+      "port": 51213,
+      "cwd": "aura-api"
+    },
+    {
+      "name": "Aura API (Fastify Dev)",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["node_modules/tsx/dist/cli.cjs", "watch", "src/server.ts"],
+      "port": 3000,
+      "cwd": "aura-api"
+    },
+    {
+      "name": "Prisma Studio (DB GUI)",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["node_modules/prisma/build/index.js", "studio", "--port", "5555"],
+      "port": 5555,
+      "cwd": "aura-api"
+    },
+    {
+      "name": "Aura Admin Dashboard",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["-e", "const http=require('http'),fs=require('fs'),path=require('path');http.createServer((req,res)=>{res.setHeader('Content-Type','text/html');res.setHeader('Access-Control-Allow-Origin','*');res.end(fs.readFileSync(path.join(__dirname,'index.html')))}).listen(4000,()=>console.log('Admin dashboard on port 4000'))"],
+      "port": 4000,
+      "cwd": "aura-admin"
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+# ===========================
+# Aura API — Fastify + Prisma
+# ===========================
+
+# Dependencies
+node_modules/
+
+# Environment — secrets live here, never commit
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+
+# Build
+dist/
+build/
+
+# Prisma generated client (re-generated on install)
+node_modules/.prisma/
+/src/generated/prisma
+
+# Prisma migrations lock
+prisma/migrations/migration_lock.toml
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+
+# TypeScript
+*.tsbuildinfo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Docker override for local dev
+docker-compose.override.yml
