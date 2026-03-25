@@ -2,7 +2,6 @@
   "name": "aura-api",
   "version": "1.0.0",
   "main": "src/server.ts",
-  "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
