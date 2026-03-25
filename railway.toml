@@ -1,17 +1,9 @@
+# This is a monorepo configuration
+# Railway will create separate services for each workspace
+
 [build]
 builder = "nixpacks"
 
+# Don't deploy from root - this is just for monorepo management
 [deploy]
-startCommand = "npm run start"
-healthcheckPath = "/health"
-healthcheckTimeout = 300
-restartPolicyType = "on_failure"
-restartPolicyMaxRetries = 10
-
-[[services]]
-name = "api"
-source = "aura-api"
-
-[[services]]
-name = "admin"
-source = "aura-admin"
+# No deployment configuration for root

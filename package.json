@@ -12,6 +12,7 @@
     "install:all": "npm install --workspaces",
     "build": "npm run build --workspaces",
     "dev": "concurrently \"npm run dev --workspace=aura-api\" \"npm run dev --workspace=aura-admin\"",
+    "start": "cd aura-api && npm start",
     "start:api": "npm start --workspace=aura-api",
     "start:admin": "npm start --workspace=aura-admin",
     "deploy:api": "cd aura-api && railway deploy",
