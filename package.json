@@ -1,0 +1,28 @@
+{
+  "name": "personal-super-app",
+  "version": "1.0.0",
+  "description": "Aura Super App - Monorepo",
+  "private": true,
+  "workspaces": [
+    "aura-api",
+    "aura-admin",
+    "aura-mobile"
+  ],
+  "scripts": {
+    "install:all": "npm install --workspaces",
+    "build": "npm run build --workspaces",
+    "dev": "concurrently \"npm run dev --workspace=aura-api\" \"npm run dev --workspace=aura-admin\"",
+    "start:api": "npm start --workspace=aura-api",
+    "start:admin": "npm start --workspace=aura-admin",
+    "deploy:api": "cd aura-api && railway deploy",
+    "deploy:admin": "cd aura-admin && railway deploy",
+    "deploy:all": "npm run deploy:api && npm run deploy:admin"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
