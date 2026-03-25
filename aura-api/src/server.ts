@@ -88,7 +88,7 @@ async function bootstrap() {
   await app.register(adminRoutes, { prefix: '/api/v1/admin' });
 
   // --- Global Error Handler ---
-  app.setErrorHandler((error, request, reply) => {
+  app.setErrorHandler((error: any, request, reply) => {
     app.log.error(error);
     const statusCode = error.statusCode || 500;
     reply.status(statusCode).send({
